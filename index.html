@@ -1,312 +1,93 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>OCR + TTS (Web) — Yazıyı Oku & Seslendir</title>
-
-  <!-- Tesseract.js (v5) -->
+  <meta charset="UTF-8" />
+  <title>OCR + TTS Basit Uygulama</title>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
-
   <style>
-    :root{
-      --bg:#0f1724;
-      --card:#0b1220;
-      --accent:#06b6d4;
-      --muted:#94a3b8;
-      --text:#e6eef6;
-      --glass: rgba(255,255,255,0.03);
+    body {
+      font-family: Arial, sans-serif;
+      background: #111;
+      color: #eee;
+      padding: 20px;
+      max-width: 480px;
+      margin: auto;
     }
-    html,body{height:100%;margin:0;background:linear-gradient(180deg,var(--bg),#071028);font-family:Inter,system-ui,Segoe UI,Roboto,Arial; color:var(--text);}
-    .wrap{max-width:920px;margin:18px auto;padding:16px;}
-    header{display:flex;gap:12px;align-items:center;justify-content:space-between}
-    h1{font-size:18px;margin:0}
-    p.lead{margin:0;color:var(--muted);font-size:13px}
-
-    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-radius:12px; padding:14px; box-shadow:0 6px 18px rgba(2,6,23,0.6); margin-top:14px; border:1px solid rgba(255,255,255,0.03);} 
-    .controls{display:flex;gap:8px;flex-wrap:wrap}
-    button,select,input[type="file"]{background:var(--glass); border:1px solid rgba(255,255,255,0.04); color:var(--text); padding:10px 12px; border-radius:10px; font-size:14px; cursor:pointer;}
-    button:active{transform:translateY(1px)}
-    #cameraVideo{width:100%;max-height:360px;border-radius:10px;object-fit:cover;background:#000;display:none}
-    #preview{width:100%;border-radius:10px;display:none;max-height:360px;object-fit:contain;background:#000}
-    textarea{width:100%;min-height:140px;border-radius:10px;padding:12px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:var(--text);resize:vertical}
-    .row{display:flex;gap:8px;align-items:center}
-    .opts{display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap}
-    label{font-size:13px;color:var(--muted)}
-    .progress{height:8px;background:rgba(255,255,255,0.03);border-radius:999px;overflow:hidden;margin-top:8px}
-    .progress > div{height:100%;width:0;background:linear-gradient(90deg,var(--accent),#7c3aed)}
-    footer{margin-top:12px;color:var(--muted);font-size:13px;text-align:center}
-
-    /* Responsive tweaks */
-    @media (min-width:720px){
-      .controls{flex-direction:row}
-      .actions{min-width:240px}
+    input, button, textarea {
+      font-size: 1rem;
+      margin: 10px 0;
+      width: 100%;
+      max-width: 480px;
+      border-radius: 6px;
+      border: none;
+      padding: 10px;
+    }
+    button {
+      background-color: #06b6d4;
+      color: #fff;
+      cursor: pointer;
+      border: none;
+      transition: background-color 0.3s ease;
+    }
+    button:hover {
+      background-color: #0ea5e9;
+    }
+    textarea {
+      height: 150px;
+      resize: vertical;
+      background: #222;
+      color: #eee;
+      border: 1px solid #333;
+      padding: 12px;
     }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <header>
-      <div>
-        <h1>📷 Yazıyı Fotoğrafla Al → 📝 OCR → 🔊 Seslendir</h1>
-        <p class="lead">Herkesin kullanabileceği basit web OCR + TTS uygulaması (Türkçe destekli)</p>
-      </div>
-      <div style="text-align:right">
-        <small style="color:var(--muted)">HTTPS gerekli / Tarayıcı uyumluluğu: modern tarayıcılar</small>
-      </div>
-    </header>
+  <h2>📷 OCR + 🔊 Seslendirme Uygulaması</h2>
 
-    <div class="card">
-      <div class="controls">
-        <div class="actions" style="flex:1">
-          <div class="row" style="margin-bottom:8px">
-            <button id="btnOpenCamera">📷 Kamerayı Aç</button>
-            <button id="btnCloseCamera" style="display:none">✖️ Kapat</button>
-            <input id="fileInput" type="file" accept="image/*" style="margin-left:6px" />
-          </div>
+  <input type="file" id="fileInput" accept="image/*" />
+  <button id="btnOCR">OCR Yap</button>
 
-          <video id="cameraVideo" playsinline autoplay></video>
-          <img id="preview" alt="Seçilen veya çekilen görüntü önizlemesi" />
+  <textarea id="result" placeholder="OCR sonucu burada görünecek..."></textarea>
+  <button id="btnSpeak">Seslendir</button>
 
-          <div style="margin-top:8px">
-            <button id="btnCapture" style="display:none">📸 Fotoğraf Çek & OCR'a Gönder</button>
-            <button id="btnRecognizeFromPreview" style="display:none">🔎 Önizlemeden OCR</button>
-          </div>
+  <script>
+    const fileInput = document.getElementById('fileInput');
+    const btnOCR = document.getElementById('btnOCR');
+    const result = document.getElementById('result');
+    const btnSpeak = document.getElementById('btnSpeak');
 
-          <div class="progress" id="progressWrap" style="display:none">
-            <div id="progressBar" style="width:0%"></div>
-          </div>
-        </div>
-
-        <div style="width:280px">
-          <label>Dil</label>
-          <select id="langSelect" style="width:100%;margin-top:6px">
-            <option value="tur" selected>Türkçe (tur)</option>
-            <option value="eng">English (eng)</option>
-            <option value="spa">Español (spa)</option>
-            <option value="ita">Italiano (ita)</option>
-          </select>
-
-          <label style="margin-top:10px">Ses Hızı: <span id="rateLabel">1.0</span></label>
-          <input id="rate" type="range" min="0.5" max="2" step="0.1" value="1" style="width:100%">
-
-          <label style="margin-top:10px">Pitch: <span id="pitchLabel">1.0</span></label>
-          <input id="pitch" type="range" min="0.5" max="2" step="0.1" value="1" style="width:100%">
-
-          <div style="display:flex;gap:8px;margin-top:10px">
-            <button id="btnSpeak" style="flex:1">🔊 Oku</button>
-            <button id="btnStop" style="flex:1">⏹ Durdur</button>
-          </div>
-
-          <div style="margin-top:10px">
-            <button id="btnClear" style="width:100%">🧹 Temizle</button>
-          </div>
-        </div>
-      </div>
-
-      <div style="margin-top:12px">
-        <label>Tanımlanan Metin</label>
-        <textarea id="result" placeholder="OCR sonucu burada gözükecek..."></textarea>
-      </div>
-    </div>
-
-    <footer>
-      <small>Hazır — tek dosya. Sorun çıkarsa traineddata'yı kendi sunucuna koyup <code>langPath</code> değerini güncelle.</small>
-    </footer>
-  </div>
-
-<script>
-(async () => {
-  // Eleman referansları
-  const btnOpenCamera = document.getElementById('btnOpenCamera');
-  const btnCloseCamera = document.getElementById('btnCloseCamera');
-  const btnCapture = document.getElementById('btnCapture');
-  const btnRecognizeFromPreview = document.getElementById('btnRecognizeFromPreview');
-  const fileInput = document.getElementById('fileInput');
-  const video = document.getElementById('cameraVideo');
-  const preview = document.getElementById('preview');
-  const progressWrap = document.getElementById('progressWrap');
-  const progressBar = document.getElementById('progressBar');
-  const result = document.getElementById('result');
-  const langSelect = document.getElementById('langSelect');
-  const btnSpeak = document.getElementById('btnSpeak');
-  const btnStop = document.getElementById('btnStop');
-  const rateInput = document.getElementById('rate'); const rateLabel = document.getElementById('rateLabel');
-  const pitchInput = document.getElementById('pitch'); const pitchLabel = document.getElementById('pitchLabel');
-  const btnClear = document.getElementById('btnClear');
-
-  // Tesseract worker (lazy init)
-  let worker = null;
-  let stream = null;
-
-  // Helper: init worker for selected language
-  async function initWorkerIfNeeded(lang) {
-    if (worker) {
-      // if different lang, re-init
-      if (workerLang !== lang) {
-        await worker.terminate();
-        worker = null;
-      } else {
+    btnOCR.onclick = async () => {
+      if (!fileInput.files.length) {
+        alert('Lütfen bir fotoğraf seçin!');
         return;
       }
-    }
-    // Provide a langPath where .traineddata files live.
-    // If CDN blocks, place tur.traineddata on your server and change this path.
-    const LANG_PATH = 'https://cdn.jsdelivr.net/gh/tesseract-ocr/tessdata_fast@main';
-    worker = Tesseract.createWorker({
-      logger: m => {
-        // progress events: {status, progress}
-        if (m.status === 'recognizing text' || m.status === 'processing') {
-          progressWrap.style.display = 'block';
-          progressBar.style.width = Math.round((m.progress || 0) * 100) + '%';
-        } else if (m.status === 'loaded lang' || m.status === 'initialized') {
-          progressBar.style.width = '0%';
-        }
-      },
-      // tell worker where to fetch traineddata from
-      langPath: LANG_PATH
-    });
-    workerLang = lang;
-    await worker.load();
-    try {
-      await worker.loadLanguage(lang);
-    } catch(e) {
-      console.warn('Dil dosyası yüklenemedi:', e);
-      alert('OCR dil dosyası yüklenemedi. Eğer sorun devam ederse, traineddata dosyasını kendi sunucunuza koyup langPath değiştirin.');
-      throw e;
-    }
-    await worker.initialize(lang);
-  }
+      const file = fileInput.files[0];
+      const dataURL = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.readAsDataURL(file);
+      });
 
-  // Capture image from video
-  function captureFromVideo() {
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    return canvas.toDataURL('image/png');
-  }
+      result.value = "OCR yapılıyor, lütfen bekleyin...";
+      try {
+        const { data: { text } } = await Tesseract.recognize(dataURL, 'tur');
+        result.value = text.trim();
+      } catch (error) {
+        result.value = "OCR işlemi başarısız: " + error.message;
+      }
+    };
 
-  // Recognize image dataURL
-  let workerLang = null;
-  async function recognizeDataURL(dataURL) {
-    const lang = langSelect.value || 'tur';
-    try {
-      progressWrap.style.display = 'block';
-      progressBar.style.width = '0%';
-      await initWorkerIfNeeded(lang);
-      const { data: { text } } = await worker.recognize(dataURL);
-      result.value = text.trim();
-    } catch (e) {
-      console.error(e);
-      alert('OCR işlemi sırasında hata: ' + (e.message || e));
-    } finally {
-      progressWrap.style.display = 'none';
-    }
-  }
-
-  // Open camera
-  btnOpenCamera.addEventListener('click', async () => {
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
-      video.srcObject = stream;
-      video.style.display = 'block';
-      btnCapture.style.display = 'inline-block';
-      btnCloseCamera.style.display = 'inline-block';
-      preview.style.display = 'none';
-      // small delay to let video resolve sizes
-      setTimeout(()=> video.play(), 100);
-    } catch (e) {
-      console.error(e);
-      alert('Kamera açılamadı: ' + (e.message || e));
-    }
-  });
-
-  // Close camera
-  btnCloseCamera.addEventListener('click', () => {
-    if (stream) {
-      stream.getTracks().forEach(t => t.stop());
-      stream = null;
-    }
-    video.srcObject = null;
-    video.style.display = 'none';
-    btnCapture.style.display = 'none';
-    btnCloseCamera.style.display = 'none';
-  });
-
-  // Capture button
-  btnCapture.addEventListener('click', async () => {
-    const dataUrl = captureFromVideo();
-    preview.src = dataUrl;
-    preview.style.display = 'block';
-    btnRecognizeFromPreview.style.display = 'inline-block';
-    // Optionally auto-run OCR:
-    await recognizeDataURL(dataUrl);
-  });
-
-  // Recognize from preview button
-  btnRecognizeFromPreview.addEventListener('click', async () => {
-    if (preview.src) await recognizeDataURL(preview.src);
-  });
-
-  // File input (gallery)
-  fileInput.addEventListener('change', (ev) => {
-    const f = ev.target.files && ev.target.files[0];
-    if (!f) return;
-    const url = URL.createObjectURL(f);
-    preview.src = url;
-    preview.style.display = 'block';
-    video.style.display = 'none';
-    btnCapture.style.display = 'none';
-    btnRecognizeFromPreview.style.display = 'inline-block';
-  });
-
-  // Speak text
-  function speak(text) {
-    if (!('speechSynthesis' in window)) {
-      alert('Bu tarayıcı SpeechSynthesis API desteği sunmuyor.');
-      return;
-    }
-    if (!text || !text.trim()) return;
-    // stop previous
-    window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    // choose voice with same language if possible
-    const langMap = { tur:'tr-TR', eng:'en-US', spa:'es-ES', ita:'it-IT' };
-    u.lang = langMap[langSelect.value] || 'tr-TR';
-    u.rate = parseFloat(rateInput.value) || 1;
-    u.pitch = parseFloat(pitchInput.value) || 1;
-    window.speechSynthesis.speak(u);
-  }
-
-  btnSpeak.addEventListener('click', () => speak(result.value));
-  btnStop.addEventListener('click', () => window.speechSynthesis.cancel());
-
-  // Live update labels
-  rateInput.addEventListener('input', ()=> rateLabel.textContent = rateInput.value);
-  pitchInput.addEventListener('input', ()=> pitchLabel.textContent = pitchInput.value);
-
-  btnClear.addEventListener('click', () => {
-    result.value = '';
-    preview.src = '';
-    preview.style.display = 'none';
-    if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; video.style.display='none'; }
-    btnCapture.style.display = 'none';
-    btnCloseCamera.style.display = 'none';
-  });
-
-  // Clean up worker on page unload
-  window.addEventListener('beforeunload', async () => {
-    if (worker) await worker.terminate();
-    if (stream) stream.getTracks().forEach(t => t.stop());
-  });
-
-  // Optional: try to pre-load voices (some browsers load asynchronously)
-  if (typeof speechSynthesis !== 'undefined') {
-    speechSynthesis.onvoiceschanged = () => { /* noop - just ensure voices load */ };
-  }
-})();
-</script>
+    btnSpeak.onclick = () => {
+      const text = result.value.trim();
+      if (!text) {
+        alert('Lütfen önce OCR sonucu elde edin.');
+        return;
+      }
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'tr-TR';
+      window.speechSynthesis.speak(utterance);
+    };
+  </script>
 </body>
 </html>
