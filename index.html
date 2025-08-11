@@ -2,97 +2,251 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8" />
-  <title>OCR + TTS Basit Uygulama</title>
+  <title>OCR + Seslendirme (Hız Barlı)</title>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
   <style>
+    * { box-sizing: border-box; }
     body {
-      font-family: Arial, sans-serif;
-      background: #111;
+      background: #121212;
       color: #eee;
-      padding: 20px;
-      max-width: 480px;
-      margin: auto;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
     }
-    input, button, textarea {
-      font-size: 1rem;
-      margin: 10px 0;
+    h1 {
+      margin-bottom: 1rem;
+      font-weight: 700;
+      color: #06b6d4;
+      text-align: center;
+    }
+    .container {
+      background: #1e1e1e;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 0 15px rgba(6, 182, 212, 0.4);
+      max-width: 480px;
       width: 100%;
-      max-width: 480px;
-      border-radius: 6px;
-      border: none;
-      padding: 10px;
     }
-    button {
-      background-color: #06b6d4;
-      color: #fff;
-      cursor: pointer;
+    input[type="file"] {
+      width: 100%;
+      padding: 0.6rem;
+      border-radius: 8px;
       border: none;
+      background: #2c2c2c;
+      color: #eee;
+      cursor: pointer;
+      font-size: 1rem;
+      margin-bottom: 1.2rem;
       transition: background-color 0.3s ease;
     }
-    button:hover {
+    input[type="file"]:hover {
+      background: #06b6d4;
+      color: #121212;
+    }
+    button {
+      width: 100%;
+      padding: 0.8rem;
+      border-radius: 8px;
+      border: none;
+      background-color: #06b6d4;
+      color: white;
+      font-size: 1.1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      margin-bottom: 1rem;
+      user-select: none;
+    }
+    button:hover:not(:disabled) {
       background-color: #0ea5e9;
     }
+    button:disabled {
+      background-color: #555;
+      cursor: not-allowed;
+    }
     textarea {
+      width: 100%;
       height: 150px;
-      resize: vertical;
-      background: #222;
+      background: #2c2c2c;
+      border-radius: 8px;
+      border: none;
+      padding: 1rem;
       color: #eee;
-      border: 1px solid #333;
-      padding: 12px;
+      font-size: 1rem;
+      resize: vertical;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin-bottom: 1rem;
+      box-shadow: inset 0 0 5px rgba(0,0,0,0.7);
+    }
+    .status {
+      text-align: center;
+      margin-bottom: 1rem;
+      font-style: italic;
+      color: #bbb;
+      min-height: 1.4rem;
+      user-select: none;
+    }
+    .speed-control {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    .speed-control label {
+      min-width: 80px;
+    }
+    .speed-control input[type="range"] {
+      flex: 1;
+      -webkit-appearance: none;
+      width: 100%;
+      height: 8px;
+      border-radius: 5px;
+      background: #444;
+      cursor: pointer;
+    }
+    .speed-control input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #06b6d4;
+      cursor: pointer;
+      border: none;
+      margin-top: -6px;
+    }
+    .speed-control input[type="range"]::-moz-range-thumb {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #06b6d4;
+      cursor: pointer;
+      border: none;
+    }
+    .speed-value {
+      width: 40px;
+      text-align: center;
+      font-weight: 600;
+      user-select: none;
     }
   </style>
 </head>
 <body>
-  <h2>📷 OCR + 🔊 Seslendirme Uygulaması</h2>
+  <h1>📷 Görüntüden Metine Çevirme + 🔊 Seslendirme Uygulaması</h1>
+  <div class="container">
+    <input type="file" id="fileInput" accept="image/*" />
+    <button id="btnOCR" disabled> Metin Haline Getir </button>
+    <div class="status" id="status"></div>
+    <textarea id="result" placeholder="Tanınan metin burada görünecek..." readonly></textarea>
 
-  <input type="file" id="fileInput" accept="image/*" />
-  <button id="btnOCR">OCR Yap</button>
+    <div class="speed-control">
+      <label for="speedRange">Hız:</label>
+      <input type="range" id="speedRange" min="0.5" max="3" value="1" step="0.1" disabled />
+      <div class="speed-value" id="speedValue">1.0x</div>
+    </div>
 
-  <textarea id="result" placeholder="OCR sonucu burada görünecek..."></textarea>
-  <button id="btnSpeak">Seslendir</button>
+    <button id="btnSpeak" disabled>Seslendir</button>
+    <button id="btnStop" style="display:none; background:#ef4444;">Durdur</button>
+  </div>
 
   <script>
     const fileInput = document.getElementById('fileInput');
     const btnOCR = document.getElementById('btnOCR');
-    const result = document.getElementById('result');
     const btnSpeak = document.getElementById('btnSpeak');
+    const btnStop = document.getElementById('btnStop');
+    const result = document.getElementById('result');
+    const status = document.getElementById('status');
+    const speedRange = document.getElementById('speedRange');
+    const speedValue = document.getElementById('speedValue');
 
-    btnOCR.onclick = async () => {
-      if (!fileInput.files.length) {
-        alert('Lütfen bir fotoğraf seçin!');
-        return;
-      }
+    let utterance = null;
+
+    fileInput.addEventListener('change', () => {
+      btnOCR.disabled = !fileInput.files.length;
+      status.textContent = '';
+      result.value = '';
+      btnSpeak.disabled = true;
+      speedRange.disabled = true;
+      btnStop.style.display = 'none';
+      speedRange.value = 1;
+      speedValue.textContent = '1.0x';
+    });
+
+    btnOCR.addEventListener('click', async () => {
+      if (!fileInput.files.length) return;
       const file = fileInput.files[0];
+
+      status.textContent = 'OCR yapılıyor, lütfen bekleyin...';
+      btnOCR.disabled = true;
+      btnSpeak.disabled = true;
+      speedRange.disabled = true;
+      btnStop.style.display = 'none';
+      result.value = '';
+
       const dataURL = await new Promise((resolve) => {
         const reader = new FileReader();
         reader.onload = () => resolve(reader.result);
         reader.readAsDataURL(file);
       });
 
-      result.value = "OCR yapılıyor, lütfen bekleyin...";
       try {
-        const worker = Tesseract.createWorker();
-        await worker.load();
-        await worker.loadLanguage('tur');
-        await worker.initialize('tur');
-        const { data: { text } } = await worker.recognize(dataURL);
+        const { data: { text } } = await Tesseract.recognize(dataURL, 'tur', {
+          logger: m => {
+            if (m.status === 'recognizing text') {
+              status.textContent = `OCR yapılıyor... %${(m.progress * 100).toFixed(0)}`;
+            }
+          }
+        });
         result.value = text.trim();
-        await worker.terminate();
+        status.textContent = text.trim() ? 'OCR tamamlandı.' : 'Metin bulunamadı.';
+        btnSpeak.disabled = !text.trim();
+        speedRange.disabled = !text.trim();
       } catch (error) {
-        result.value = "OCR işlemi başarısız: " + error.message;
+        status.textContent = 'OCR işlemi başarısız: ' + error.message;
+      } finally {
+        btnOCR.disabled = false;
       }
-    };
+    });
 
-    btnSpeak.onclick = () => {
+    btnSpeak.addEventListener('click', () => {
       const text = result.value.trim();
       if (!text) {
         alert('Lütfen önce OCR sonucu elde edin.');
         return;
       }
-      const utterance = new SpeechSynthesisUtterance(text);
+      if (window.speechSynthesis.speaking) {
+        alert('Seslendirme zaten devam ediyor.');
+        return;
+      }
+      utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = 'tr-TR';
+      utterance.rate = parseFloat(speedRange.value);
+      utterance.onend = () => {
+        btnSpeak.style.display = 'inline-block';
+        btnStop.style.display = 'none';
+      };
+
+      btnSpeak.style.display = 'none';
+      btnStop.style.display = 'inline-block';
+
       window.speechSynthesis.speak(utterance);
-    };
+    });
+
+    btnStop.addEventListener('click', () => {
+      if (window.speechSynthesis.speaking) {
+        window.speechSynthesis.cancel();
+      }
+      btnSpeak.style.display = 'inline-block';
+      btnStop.style.display = 'none';
+    });
+
+    speedRange.addEventListener('input', () => {
+      speedValue.textContent = speedRange.value + 'x';
+    });
   </script>
 </body>
 </html>
