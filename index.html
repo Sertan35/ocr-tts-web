@@ -2,34 +2,44 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8" />
-  <title>OCR + Seslendirme (Hız Barlı)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OCR + Seslendirme (Mobil Uyumlu)</title>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
   <style>
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+    }
     body {
+      padding: 1rem;
+      margin: 0;
+      overflow-x: hidden;
+      font-size: 16px;
       background: #121212;
       color: #eee;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      padding: 2rem;
       display: flex;
-      flex-direction: column;
-      align-items: center;
+      justify-content: center;
       min-height: 100vh;
-      margin: 0;
+      align-items: flex-start;
     }
     h1 {
       margin-bottom: 1rem;
       font-weight: 700;
       color: #06b6d4;
       text-align: center;
+      width: 100%;
+      max-width: 600px;
     }
     .container {
       background: #1e1e1e;
-      padding: 2rem;
       border-radius: 12px;
       box-shadow: 0 0 15px rgba(6, 182, 212, 0.4);
-      max-width: 480px;
+      max-width: 600px;
       width: 100%;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
     }
     input[type="file"] {
       width: 100%;
@@ -40,7 +50,6 @@
       color: #eee;
       cursor: pointer;
       font-size: 1rem;
-      margin-bottom: 1.2rem;
       transition: background-color 0.3s ease;
     }
     input[type="file"]:hover {
@@ -48,7 +57,6 @@
       color: #121212;
     }
     button {
-      width: 100%;
       padding: 0.8rem;
       border-radius: 8px;
       border: none;
@@ -58,8 +66,8 @@
       font-weight: 600;
       cursor: pointer;
       transition: background-color 0.3s ease;
-      margin-bottom: 1rem;
       user-select: none;
+      width: 100%;
     }
     button:hover:not(:disabled) {
       background-color: #0ea5e9;
@@ -68,36 +76,46 @@
       background-color: #555;
       cursor: not-allowed;
     }
-    textarea {
-      width: 100%;
-      height: 150px;
-      background: #2c2c2c;
-      border-radius: 8px;
-      border: none;
-      padding: 1rem;
-      color: #eee;
-      font-size: 1rem;
-      resize: vertical;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      margin-bottom: 1rem;
-      box-shadow: inset 0 0 5px rgba(0,0,0,0.7);
-    }
     .status {
       text-align: center;
-      margin-bottom: 1rem;
       font-style: italic;
       color: #bbb;
       min-height: 1.4rem;
       user-select: none;
     }
+    #textDisplay {
+      background: #2c2c2c;
+      border-radius: 8px;
+      padding: 1rem;
+      min-height: 150px;
+      max-height: 300px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      overflow-wrap: break-word;
+      word-break: break-word;
+      font-size: 1.1rem;
+      line-height: 1.5;
+      user-select: text;
+      max-width: 100%;
+    }
+    .highlight {
+      background-color: #facc15;
+      color: #121212;
+      border-radius: 3px;
+      padding: 0 2px;
+      transition: background-color 0.3s ease;
+    }
     .speed-control {
       display: flex;
       align-items: center;
       gap: 1rem;
-      margin-bottom: 1rem;
+      user-select: none;
+      width: 100%;
     }
     .speed-control label {
-      min-width: 80px;
+      min-width: 50px;
+      font-weight: 600;
+      color: #eee;
     }
     .speed-control input[type="range"] {
       flex: 1;
@@ -107,6 +125,10 @@
       border-radius: 5px;
       background: #444;
       cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    .speed-control input[type="range"]:hover {
+      background: #06b6d4;
     }
     .speed-control input[type="range"]::-webkit-slider-thumb {
       -webkit-appearance: none;
@@ -118,6 +140,7 @@
       cursor: pointer;
       border: none;
       margin-top: -6px;
+      transition: background-color 0.3s ease;
     }
     .speed-control input[type="range"]::-moz-range-thumb {
       width: 20px;
@@ -126,22 +149,24 @@
       background: #06b6d4;
       cursor: pointer;
       border: none;
+      transition: background-color 0.3s ease;
     }
     .speed-value {
       width: 40px;
       text-align: center;
       font-weight: 600;
+      color: #eee;
       user-select: none;
     }
   </style>
 </head>
 <body>
-  <h1>📷 Görüntüden Metine Çevirme ve 🔊 Seslendirme Uygulaması</h1>
+  <h1>📷 OCR + 🔊 Seslendirme Uygulaması</h1>
   <div class="container">
     <input type="file" id="fileInput" accept="image/*" />
-    <button id="btnOCR" disabled> Metin Haline Getir </button>
+    <button id="btnOCR" disabled>OCR Yap</button>
     <div class="status" id="status"></div>
-    <textarea id="result" placeholder="Tanınan metin burada görünecek..." readonly></textarea>
+    <div id="textDisplay" aria-live="polite" aria-label="OCR sonucu metin"></div>
 
     <div class="speed-control">
       <label for="speedRange">Hız:</label>
@@ -150,7 +175,7 @@
     </div>
 
     <button id="btnSpeak" disabled>Seslendir</button>
-    <button id="btnStop" style="display:none; background:#ef4444;">Durdur</button>
+    <button id="btnStop" style="display:none; background:#ef4444; color:#fff;">Durdur</button>
   </div>
 
   <script>
@@ -158,36 +183,38 @@
     const btnOCR = document.getElementById('btnOCR');
     const btnSpeak = document.getElementById('btnSpeak');
     const btnStop = document.getElementById('btnStop');
-    const result = document.getElementById('result');
     const status = document.getElementById('status');
+    const textDisplay = document.getElementById('textDisplay');
     const speedRange = document.getElementById('speedRange');
     const speedValue = document.getElementById('speedValue');
 
     let utterance = null;
+    let originalText = '';
+    let words = [];
 
     fileInput.addEventListener('change', () => {
       btnOCR.disabled = !fileInput.files.length;
       status.textContent = '';
-      result.value = '';
+      textDisplay.textContent = '';
       btnSpeak.disabled = true;
-      speedRange.disabled = true;
       btnStop.style.display = 'none';
+      speedRange.disabled = true;
       speedRange.value = 1;
       speedValue.textContent = '1.0x';
     });
 
     btnOCR.addEventListener('click', async () => {
       if (!fileInput.files.length) return;
-      const file = fileInput.files[0];
 
+      const file = fileInput.files[0];
       status.textContent = 'OCR yapılıyor, lütfen bekleyin...';
       btnOCR.disabled = true;
       btnSpeak.disabled = true;
       speedRange.disabled = true;
       btnStop.style.display = 'none';
-      result.value = '';
+      textDisplay.textContent = '';
 
-      const dataURL = await new Promise((resolve) => {
+      const dataURL = await new Promise(resolve => {
         const reader = new FileReader();
         reader.onload = () => resolve(reader.result);
         reader.readAsDataURL(file);
@@ -196,36 +223,57 @@
       try {
         const { data: { text } } = await Tesseract.recognize(dataURL, 'tur', {
           logger: m => {
-            if (m.status === 'recognizing text') {
-              status.textContent = `OCR yapılıyor... %${(m.progress * 100).toFixed(0)}`;
+            if(m.status === 'recognizing text') {
+              status.textContent = `OCR yapılıyor... %${(m.progress*100).toFixed(0)}`;
             }
           }
         });
-        result.value = text.trim();
-        status.textContent = text.trim() ? 'OCR tamamlandı.' : 'Metin bulunamadı.';
-        btnSpeak.disabled = !text.trim();
-        speedRange.disabled = !text.trim();
-      } catch (error) {
-        status.textContent = 'OCR işlemi başarısız: ' + error.message;
-      } finally {
+        originalText = text.trim();
+        status.textContent = originalText ? 'OCR tamamlandı.' : 'Metin bulunamadı.';
+        btnSpeak.disabled = !originalText;
+        speedRange.disabled = !originalText;
+        btnOCR.disabled = false;
+
+        words = originalText.split(/\s+/);
+        renderText( -1 );
+      } catch(e) {
+        status.textContent = 'OCR işlemi başarısız: ' + e.message;
         btnOCR.disabled = false;
       }
     });
 
     btnSpeak.addEventListener('click', () => {
-      const text = result.value.trim();
-      if (!text) {
+      if (!originalText) {
         alert('Lütfen önce OCR sonucu elde edin.');
         return;
       }
       if (window.speechSynthesis.speaking) {
-        alert('Seslendirme zaten devam ediyor.');
+        alert('Seslendirme devam ediyor.');
         return;
       }
-      utterance = new SpeechSynthesisUtterance(text);
+
+      utterance = new SpeechSynthesisUtterance(originalText);
       utterance.lang = 'tr-TR';
       utterance.rate = parseFloat(speedRange.value);
+
+      utterance.onboundary = event => {
+        if(event.name === 'word') {
+          const charIndex = event.charIndex;
+          let cumulative = 0;
+          let wordIndex = -1;
+          for(let i = 0; i < words.length; i++) {
+            cumulative += words[i].length + 1;
+            if(cumulative > charIndex) {
+              wordIndex = i;
+              break;
+            }
+          }
+          renderText(wordIndex);
+        }
+      };
+
       utterance.onend = () => {
+        renderText(-1);
         btnSpeak.style.display = 'inline-block';
         btnStop.style.display = 'none';
       };
@@ -240,13 +288,69 @@
       if (window.speechSynthesis.speaking) {
         window.speechSynthesis.cancel();
       }
+      renderText(-1);
       btnSpeak.style.display = 'inline-block';
       btnStop.style.display = 'none';
     });
 
     speedRange.addEventListener('input', () => {
       speedValue.textContent = speedRange.value + 'x';
+
+      if (window.speechSynthesis.speaking) {
+        window.speechSynthesis.cancel();
+
+        utterance = new SpeechSynthesisUtterance(originalText);
+        utterance.lang = 'tr-TR';
+        utterance.rate = parseFloat(speedRange.value);
+
+        utterance.onboundary = event => {
+          if(event.name === 'word') {
+            const charIndex = event.charIndex;
+            let cumulative = 0;
+            let wordIndex = -1;
+            for(let i = 0; i < words.length; i++) {
+              cumulative += words[i].length + 1;
+              if(cumulative > charIndex) {
+                wordIndex = i;
+                break;
+              }
+            }
+            renderText(wordIndex);
+          }
+        };
+
+        utterance.onend = () => {
+          renderText(-1);
+          btnSpeak.style.display = 'inline-block';
+          btnStop.style.display = 'none';
+        };
+
+        btnSpeak.style.display = 'none';
+        btnStop.style.display = 'inline-block';
+
+        window.speechSynthesis.speak(utterance);
+      }
     });
+
+    function renderText(wordIndex) {
+      if(wordIndex < 0) {
+        textDisplay.innerHTML = escapeHtml(originalText);
+        return;
+      }
+      let html = '';
+      for(let i = 0; i < words.length; i++) {
+        if(i === wordIndex) {
+          html += `<span class="highlight">${escapeHtml(words[i])}</span> `;
+        } else {
+          html += escapeHtml(words[i]) + ' ';
+        }
+      }
+      textDisplay.innerHTML = html.trim();
+    }
+
+    function escapeHtml(text) {
+      return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
   </script>
 </body>
 </html>
