@@ -71,8 +71,13 @@
 
       result.value = "OCR yapılıyor, lütfen bekleyin...";
       try {
-        const { data: { text } } = await Tesseract.recognize(dataURL, 'tur');
+        const worker = Tesseract.createWorker();
+        await worker.load();
+        await worker.loadLanguage('tur');
+        await worker.initialize('tur');
+        const { data: { text } } = await worker.recognize(dataURL);
         result.value = text.trim();
+        await worker.terminate();
       } catch (error) {
         result.value = "OCR işlemi başarısız: " + error.message;
       }
